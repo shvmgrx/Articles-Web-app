@@ -1,36 +1,53 @@
-var express = require('express');
-var bodyParser = require('body-parser');
-var path = require('path');
-var expressValidator = require('express-validator');
-var mongojs=require('mongojs');
-var db = mongojs('customerapp', ['users']);
-
-var app = express();
-
-/*
-var logger=function(req,res,next){
-	console.log('Logging');
-	next();
-}
-
-app.use(logger);
-*/
-app.set('view engine','ejs');
-app.set('views',path.join(__dirname,'views'));
+const express = require('express');
+const path = require('path');
+const mongoose = require('mongoose');
+const bodyParser = require('body-parser');
+const expressValidator = require('express-validator');
+const flash = require('connect-flash');
+const session = require('express-session');
+const passport = require('passport');
+const config = require('./config/database');
 
 
+mongoose.connect('mongodb://localhost/nodekb');
+let db = mongoose.connection;
 
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({extended:false}));
+db.once('open',function(){
+  console.log('Connected to mongo db');
+});
 
-app.use(express.static(path.join(__dirname,'public')))
+db.on('error',function(err){
+  console.log(err);
+});
 
-app.use(function(req,res,next){
-	res.locals.errors=null;
-	next();
+//Init App
+const app = express();
 
-})
+let Article = require('./models/article');
 
+//Load View Engine
+app.set('views', path.join(__dirname,'views'));
+app.set('view engine','pug');
+
+
+// parse application/x-www-form-urlencoded
+app.use(bodyParser.urlencoded({ extended: false }))
+
+// parse application/json
+app.use(bodyParser.json())
+
+
+app.use(session({
+  secret: 'keyboard cat',
+  resave: true,
+  saveUninitialized: true
+}));
+
+app.use(require('connect-flash')());
+app.use(function (req, res, next) {
+  res.locals.messages = require('express-messages')(req, res);
+  next();
+});
 
 app.use(expressValidator({
   errorFormatter: function(param, msg, value) {
@@ -49,74 +66,41 @@ app.use(expressValidator({
   }
 }));
 
-var users=[
-{
-	id:1,
-	first_name:"Shivam",
-	last_name:"Goraksha",
-},
-{
-	id:2,
-	first_name:"Shawn",
-	last_name:"Mendes",
-},
-{
-	id:3,
-	first_name:"Ricky",
-	last_name:"Martin",
-}
-]
+require('./config/passport') (passport);
+app.use(passport.initialize());
+app.use(passport.session());
 
+app.get('*', function(req,res,next){
+  res.locals.user = req.user || null;
+  next();
+});
+
+app.use(express.static(path.join(__dirname,'public')));
+
+//Home route
 app.get('/',function(req,res){
-	db.users.find(function(err,docs){
-	console.log(docs);
-	
-		res.render('index',{
-		title:'Customers',
-		users:docs
-	});
-	})
+  Article.find({},function(err,articles){
+    if(err){
+      console.log(err);
+    }
+    else{
+    res.render('index',{
+      title:'Articles',
+      articles: articles
+    });
+  }
+  });
 
 });
 
+let articles = require('./routes/articles');
+let users = require('./routes/users');
+app.use('/articles', articles);
+app.use('/users', users);
 
-app.post('/users/add',function(req,res){
-	
-	req.checkBody('first_name','First name is required').notEmpty();
-	req.checkBody('last_name','Last name is required').notEmpty();
 
-	var errors =req.validationErrors();
 
-	if(errors){
-		res.render('index',{
-		title:'Customers',
-		users:users,
-		errors: errors
-	});
-	}
-	else{
-		var newUser = {
-		first_name: req.body.first_name,
-		last_name: req.body.last_name
-		}
-		
-		db.users.insert(newUser,function(err,result){
-			if(err){
-				console.log(err);
-			}
-			res.redirect('/');
-		});
-		
-
-	}
-
-	
-
-		
+//Start Server
+app.listen(3007,function(){
+  console.log("Server on 3007");
 });
-
-
-
-app.listen(8001, function(){
-	console.log('Server started on Port 8001...');
-})

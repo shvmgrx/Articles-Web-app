@@ -1,18 +1,24 @@
 {
-  "name": "customerapp",
+  "name": "nodekb",
   "version": "1.0.0",
-  "description": "Simple customer manage",
+  "description": "Simple knowledge app",
   "main": "app.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node app"
   },
-  "author": "SHVMGRX",
+  "author": "Shivam Goraksha",
   "license": "ISC",
   "dependencies": {
+    "bcryptjs": "^2.4.3",
     "body-parser": "^1.17.2",
-    "ejs": "^2.5.7",
+    "connect-flash": "^0.1.1",
     "express": "^4.15.4",
+    "express-messages": "^1.0.1",
+    "express-session": "^1.15.5",
     "express-validator": "^3.2.1",
-    "mongojs": "^2.4.0"
+    "mongoose": "^4.11.6",
+    "passport": "^0.3.2",
+    "passport-local": "^1.0.0",
+    "pug": "^2.0.0-rc.3"
   }
 }
